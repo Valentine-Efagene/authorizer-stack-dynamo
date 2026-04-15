@@ -24,7 +24,7 @@ export class AuthorizerStack extends cdk.Stack {
     // === Authorizer Lambda ===
     const authorizerFn = new lambdaNode.NodejsFunction(this, "AuthorizerFunction", {
       runtime: lambda.Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, "../lambda/authorizer.ts"),
+      entry: path.join(__dirname, "../lambda/authorizer/handler.ts"),
       handler: "handler",
       bundling: {
         minify: process.env.NODE_ENV === "production",
@@ -40,7 +40,7 @@ export class AuthorizerStack extends cdk.Stack {
     // === API Lambda ===
     const apiFn = new lambdaNode.NodejsFunction(this, "ApiFunction", {
       runtime: lambda.Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, "../lambda/api.ts"),
+      entry: path.join(__dirname, "../lambda/api/handler.ts"),
       handler: "handler",
     });
 

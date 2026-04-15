@@ -1,7 +1,15 @@
 import * as dotenv from "dotenv";
 dotenv.config();
 
-import { handler } from "../lambda/authorizer";
+const mockValidateRequest = jest.fn();
+
+jest.mock("../lambda/authorizer/role-policy.service", () => ({
+    RolePolicyService: jest.fn().mockImplementation(() => ({
+        validateRequest: mockValidateRequest,
+    })),
+}));
+
+import { handler } from "../lambda/authorizer/handler";
 import { Effect } from "aws-cdk-lib/aws-iam";
 
 describe("Authorizer Lambda", () => {
@@ -16,12 +24,16 @@ describe("Authorizer Lambda", () => {
     } as any;
 
     beforeEach(() => {
-        jest.resetAllMocks();
+        jest.clearAllMocks();
+        mockValidateRequest.mockReset();
     });
 
     it("should allow access when policy validation passes", async () => {
+        mockValidateRequest.mockResolvedValue(true);
+
         const result = await handler(mockEvent);
 
+        expect(mockValidateRequest).toHaveBeenCalledWith(["admin", "user"], "GET", "/hello");
         expect(result).toEqual({
             principalId: "112",
             policyDocument: {
@@ -37,13 +49,16 @@ describe("Authorizer Lambda", () => {
         });
     });
 
-    it("should throw error when Authorization header is missing", async () => {
+    it("should throw unauthorized when Authorization header is missing", async () => {
         const badEvent = { ...mockEvent, headers: {} };
 
-        await expect(handler(badEvent)).rejects.toThrow("Missing Authorization token");
+        await expect(handler(badEvent)).rejects.toThrow("Unauthorized");
+        expect(mockValidateRequest).not.toHaveBeenCalled();
     });
 
     it("should throw error when validation fails", async () => {
+        mockValidateRequest.mockResolvedValue(false);
+
         await expect(handler({
             ...mockEvent,
             headers: {
